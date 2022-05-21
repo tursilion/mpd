@@ -1,6 +1,6 @@
 20111104
 
-Very much WIP and incomplete.
+Very much WIP and incomplete. There is no complete binary to download.
 
 Multiple Personality Distorter is a project I started many years ago now to allow a single stock TI-99/4A console to act like a 99/4, a 99/4A, or a v2.2 99/4A - just by using a software menu and an upgraded version of my uberGROM code.
 
