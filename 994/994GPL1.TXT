@@ -1,0 +1,499 @@
+       AORG >0000
+       TITL  '99/4 GROM'
+* GROM Header
+G0000  BYTE  >AA,>01,>00,>00,>00,>00
+       DATA  G0000
+       BYTE  >13,>90
+       DATA  G13A0
+       BYTE  >00,>00,>00,>00
+DSRLNK BR    G038F
+DSRRET BR    G03ED
+SUBCNS BR    G0840
+STDCHR BR    G0351
+UCASE  BR    G0359
+BWARN  BR    G03F7
+BERR   BR    G03FA
+BEXEC  BR    G03FD
+PWRUP  BR    G004A
+SUBINT BR    G1095
+SUBPWR BR    G0B19
+SUBSQR BR    G0BF0
+SUBEXP BR    G0C4B
+SUBLOG BR    G0CFB
+SUBCOS BR    G0D90
+SUBSIN BR    G0D98
+SUBTAN BR    G0DF6
+SUBATN BR    G0E17
+BEEP   BR    G0381
+HONK   BR    G0389
+BGETSS B     G4D12
+BITREV BR    G10F5
+CASDSR BR    G03C8
+       B     G285C
+       B     G37B9
+G0045  BYTE  >60,>0D,>00,>11,>00
+G004A  DST	 >8C02,@>83FE		NOTE: This is the load lowercase routine on the 4A! Programs that jump here reset the system!
+       DST   >0100,@>83FC
+       DCLR  @>83CE
+       ST    >70,@>9400
+       ST    >9F,@>8400
+       ST    >BF,@>8400
+       ST    >DF,@>8400
+       ST    >FF,@>8400
+       DST   >FF7E,@DATSTK
+       MOVE  7,G@G0402,R@1
+       CLR   @>8300
+       MOVE  >0071,@>8300,@>8301
+       MOVE  >003E,@>8300,@>8382
+       MOVE  11,@>8300,@KBNO
+       MOVE  8,@>8300,@SYSFLG
+       DST   >1001,@>8303
+       IO    >03,@>8302
+       ST    >18,@>8303
+       IO    >03,@>8302
+       INV   @>8300
+       ST    >0C,@>8303
+       IO    >03,@>8302
+       ST    >02,@>8303
+       IO    >03,@>8302
+       ST    >01,@>8303
+       IO    >03,@>8302
+       DST   >1602,@>8303
+       IO    >03,@>8302
+       CALL  G0381
+       CLR   V@>0000
+       ST    >10,@MEMSIZ
+G00BF  ST    >A0,V*MEMSIZ
+       CZ    V@>0000
+       BR    G00DD
+       MOVE  1,G@G0400,R@1
+       CLR   V*MEMSIZ
+       ADD   @MEMSIZ,@MEMSIZ
+       CEQ   >40,@MEMSIZ
+       BR    G00BF
+       ST    >08,@>83FD
+G00DD  DDEC  @MEMSIZ
+       MOVE  1,G@G020F,R@1
+       CLR   V@>0000
+       MOVE  >0FFF,V@>0000,V@>0001
+       MOVE  32,G@G0409,V@>0380
+       MOVE  >0200,G@G0464,V@>0900
+       MOVE  >0050,G@G07E7,V@>0808
+       ALL   >20
+G0106  SCAN
+       INC   @KBNO
+       CEQ   >06,@KBNO
+       BR    G0106
+       DCLR  @VROW
+G0110  ST    >60,@KEY
+G0113  FMT
+   FOR   2
+   HSTR  1,@KEY
+   FEND
+   IROW  17
+   ICOL  30
+   FOR   2
+   HSTR  1,@KEY
+   FEND
+   FEND
+       SUB   >12,@VROW
+       ADD   >08,@KEY
+       CEQ   >E0,@KEY
+       BR    G0113
+       CEQ   >03,@VROW
+       BR    G0110
+       DCLR  @VROW
+       FMT
+   IROW  5
+   ICOL  15
+   HTEX  >010203
+   ICOL  29
+   HTEX  >040506
+   ICOL  29
+   HTEX  >070809
+   IROW  8
+   ICOL  16
+   HTEX  'READY-PRESS ANY KEY TO BEGIN'
+   FEND
+       MOVE  17,G@G0446,V@>0128
+       MOVE  24,G@G043F,V@>02C4
+       MOVE  13,G@G0457,V@>016A
+       ST    >10,@>8343
+       CALL  G0337
+       DCLR  @>83D0
+       CLR   @>8355
+       ST    >04,@>836D
+G0189  XML   >19
+       BS    G0189
+G018D  DST   >0080,@DATSTK
+       DST   >01A0,*DATSTK
+       XML   >1A
+       DST   *DATSTK,*SUBSTK
+       DECT  @DATSTK
+       RTN
+       DCZ   @>83D0
+       BR    G018D
+       MOVE  1,G@G0401,R@1
+       CLR   @KBNO
+G01AD  RAND  >FF
+       SCAN
+       BR    G01AD
+       CALL  G0381
+       ALL   >20
+G01B7  ST    >FE,@DATSTK
+       ST    >06,@>836D
+       CLR   @>836C
+       CLR   @>83FB
+       MOVE  30,G@G6000,V@>0400
+       ST    >04,@>83FB
+       MOVE  30,G@G6000,V@>0420
+       CLR   @>8358
+       CLR   @>8359
+       B     G01DD
+G01DB  INC   @>8359
+G01DD  CGT   >1D,@>8359
+       BS    G01EE
+       CEQ   V@>0420(@>8358),V@>0400(@>8358)
+       BR    G01F0
+       B     G01DB
+G01EE  BR    G01F9
+G01F0  INCT  @DATSTK
+       DST   >113C,*DATSTK
+       INC   @>836C
+G01F9  XML   >1A
+       BS    G01F9
+       DCEQ  >113C,@>8300
+       BR    G020E
+       MOVE  1,G@G6000,@>8359
+       CEQ   >AA,@>8359
+       BR    G01B7
+G020E  MOVE  1,G@G0402,R@1
+       FMT
+   IROW  1
+   ICOL  2
+   HTEX  >010203
+   ICOL  29
+   HTEX  >040506
+   ICOL  29
+   HTEX  >070809
+   IROW  1
+   ICOL  31
+   HTEX  'PRESS'
+   FEND
+       MOVE  17,G@G0446,V@>0028
+       MOVE  13,G@G0457,V@>0068
+       DST   >00E4,@>8352
+       ST    >30,@>8358
+       CZ    @>836C
+       BR    G025E
+       FMT
+   COL   2
+   HTEX  'INSERT CARTRIDGE'
+   FEND
+       BR    G029C
+G025E  INC   @>8358
+       ST    @>8358,V*>8352
+       DINCT @>8352
+       MOVE  3,G@G07E4,V*>8352
+       DADD  >0004,@>8352
+       DST   *DATSTK,@>836A
+       DADD  >0004,@>836A
+       MOVE  1,G@G0000(@>836A),@KEY
+       DINC  @>836A
+       CLR   @KBNO
+       MOVE  @KBNO,G@G0000(@>836A),V*>8352
+       DADD  >003A,@>8352
+       DECT  @DATSTK
+       CGE   >00,@DATSTK
+       BS    G025E
+       ST    >13,@>8343
+       CALL  G0337
+G029C  MOVE  1,G@G0401,R@1
+G02A2  CLR   @KBNO				scan mode 0
+G02A4  RAND  >FF				random number
+       SCAN						read keyboard
+       BS    G02B2				jump if key pressed
+       INC   @KBNO				next keyboard mode
+       CEQ   >04,@KBNO			if we got to 4
+       BR    G02A4				loop if not 4 yet
+       BR    G02A2				loop and reset if is (so we scan 0,1,2,3)
+G02B2  CLR   @KBNO				come here on keypressed, reset keyboard mode
+       CLR   @>8359				key not pressed yet
+G02B6  SCAN						read keyboard
+       CEQ   >FF,@KEY			no key pressed? flag used for reject tone?
+       BS    G02D0				jump ahead if no key pressed
+       INC   @>8359				key is pressed
+       CGE   >31,@KEY			is the key '1' or higher?
+       BR    G02C9				no, so jump
+       SUB   >31,@KEY			subtract '1' to get an index value ('1' = 0,'2' = 1, etc)
+       B     G02CB				skip over
+G02C9  DEC   @KEY				decrement the key value (so split scan 'A' = 0, 'S' = 1, etc)
+G02CB  CHE   @>836C,@KEY		check if the index is higher or equal than the number of carts
+       BR    G02E1				jump if valid
+G02D0  INC   @KBNO				next keyboard mode
+       CGT   >05,@KBNO			exceeds 5?
+       BR    G02B6				skip back if not
+       CZ    @>8359				was a key ever pressed?
+       BS    G02B2				no, go scan mode 0 again
+       CALL  G0389				not sure.. play tone??
+       B     G02B2				go scan again
+G02E1  CALL  G0381				play accept tone
+       SUB   @KEY,@>836C		subtract index from the number of entries to invert the value
+       DEC   @>836C				decrement number of entries (now it's a selection)
+       ADD   @>836C,@>836C		double it, now it's a table offset
+       DST   *>836C,@>836C		
+       DINCT @>836C
+       MOVE  2,G@G0000(@>836C),@>8352
+       DST   @>8352,@>8380
+       DST   >9E80,@DATSTK
+G0301  ALL   >20
+G0303  DCZ   @>83CE
+       BR    G0303
+       DCGT  >1000,@MEMSIZ
+       BR    G031D
+       DST   @MEMSIZ,@>8300
+       DSUB  >0FFF,@>8300
+       MOVE  @>8300,V@>0FFF,V@>1000
+G031D  CLR   @>8300
+       MOVE  >006F,@>8300,@>8301
+       MOVE  >003C,@>8300,@>8384
+       CLR   @KBNO
+       MOVE  31,V@>0380,V@>0381
+       DCLR  @>8382
+       RTN
+G0337  ST    >60,@>8342
+       MOVE  2,G@G6000,@>8328
+       CEQ   >AA,@>8328
+       BR    G0350
+       CGE   >00,@>8329
+       BS    G0350
+       INCT  @SUBSTK
+       DST   @>8342,*SUBSTK
+G0350  RTN
+G0351  MOVE  >0200,G@G0464,V*FAC
+       RTN
+G0359  DST   >0664,@>83D0
+       ST    >40,@>83D2
+G0362  CLR   V*FAC
+       MOVE  6,G@G0000(@>83D0),V@>0001(@FAC)
+       CLR   V@>0007(@FAC)
+       DADD  >0008,@FAC
+       DADD  >0006,@>83D0
+       DEC   @>83D2
+       BR    G0362
+       RTN
+G0381  DST   >0429,@>8358
+G0385  IO    >00,@>8358
+       RTN
+G0389  DST   >0434,@>8358
+       BR    G0385
+G038F  FETCH @>836D
+       CLR   @ERCODE
+       ST    V*VPAB,@>8355
+       CZ    @>8355
+       BS    G03E9
+       CLR   @>8358
+       DST   @VPAB,@>8352
+G03A0  DINC  @>8352
+       CEQ   >2E,V*>8352
+       BS    G03AF
+       INC   @>8358
+       CEQ   @>8355,@>8358
+       BR    G03A0
+G03AF  ST    @>8358,@>8355
+       CGE   >08,@>8355
+       BS    G03E9
+       CLR   @ERCODE
+       DCLR  @>83D0
+       DINC  @VPAB
+       MOVE  @ERCODE,V*VPAB,@FAC
+       DADD  @ERCODE,@VPAB
+       XML   >19
+G03C8  INCT  @SUBSTK
+       DST   @>83FA,*SUBSTK
+G03CF  XML   >1A
+       BR    G03DD
+       INCT  @SUBSTK
+       DST   *DATSTK,*SUBSTK
+       DECT  @DATSTK
+       RTN
+G03DD  DCZ   @>83D0
+       BR    G03CF
+       DST   *SUBSTK,@>83FA
+       DECT  @SUBSTK
+G03E9  CEQ   @>8300,@>8300
+       RTNC
+G03ED  DECT  @SUBSTK
+       DST   *SUBSTK,@>83FA
+       DECT  @SUBSTK
+       RTN
+G03F7  B     G2864
+G03FA  B     G2866
+G03FD  B     G2010
+G0400  ABS   @>8360
+G0402  MOVE  V*>830E(@>83F9),G@GF717,@>89F8
+       BYTE  >17
+       BYTE  >17
+       BYTE  >17
+       BYTE  >17
+       BYTE  >17
+       BYTE  >17
+       BYTE  >17
+       BYTE  >17
+       BYTE  >17
+       BYTE  >17
+       BYTE  >17
+       CALL  G0301
+       EXIT
+       CARRY
+       OVF
+       XML   >04
+       RAND  >0D
+       FMT
+   HTEX  >05090A062727222206BFDFFF800592
+   HTEX  >019F0006BFDFFF8020900A
+   HTEX  >9F00
+   HTEX  '1979  TEXAS'
+   VTEX  'I'
+   HCHA  15,'S'
+   HCHA  21,'R'
+   HCHA  22,'M'
+   HCHA  6,'N'
+   HCHA  21,'S'
+   HCHA  9,'O'
+   HCHA  14,'E'
+   VTEX  'C'
+   HCHA  16,'M'
+   HCHA  17,'U'
+   HCHA  21,'E'
+   HCHA  19,>00
+   HTEX  >00
+   HTEX  >00
+   HTEX  >00
+   HTEX  ' '
+   VTEX  ' '
+   VTEX  ' '
+   VTEX  >00
+   VTEX  'H'
+   HCHA  9,'H'
+   HTEX  >00
+   HTEX  >00
+   HTEX  >00
+   HCHA  9,>FC
+   HCHA  9,'H'
+   SCRO  72
+   HTEX  >10
+   VTEX  >503814781000C0C4081020408C0C609090606094887408102000000000
+   HTEX  >08
+   HTEX  >2020202010084020101010102040000048
+   VTEX  >CC304800000010107C1010000000000000
+   VTEX  >1020000000007C00000000000000000030
+   VTEX  >0004081020408000384444444444443810
+   VTEX  >50101010107C78840408102040FC788404
+   VTEX  >040484780C14244484FC0404F88080F804048478788080F884
+   ICOL  5
+   ICOL  5
+   VCHA  25,>FC
+   HTEX  >0408102040
+   HCHA  1,'x'
+   ICOL  5
+   ICOL  5
+   VCHA  25,>84
+   ICOL  5
+   ICOL  5
+   VCHA  25,'x'
+   ICOL  5
+   ICOL  5
+   ICOL  5
+   VCHA  29,>04
+   HTEX  >7800303000
+   HTEX  '0'
+   VTEX  >0000303000003010200008102040201008
+   HTEX  >00
+   HTEX  '|'
+   HTEX  '|'
+   HTEX  >00
+   HTEX  '@'
+   VTEX  >10
+   HTEX  >102040384404081010
+   HTEX  >10
+   HTEX  'x'
+   ICOL  5
+   ICOL  29
+   IROW  5
+   ICOL  25
+   ICOL  1
+   VCHA  29,'x'
+   ICOL  5
+   ICOL  5
+   ICOL  5
+   SCRO  132
+   ICOL  5
+   ICOL  5
+   HSTR  25,@>8344
+   HCHA  5,'x'
+   HCHA  5,'D'
+   HCHA  5,>F8
+   VCHA  25,>84
+   ICOL  1
+   ICOL  1
+   ICOL  1
+   ICOL  1
+   ICOL  5
+   VCHA  25,>F8
+   HCHA  5,'D'
+   HCHA  5,'D'
+   HCHA  5,'D'
+   HSTR  25,V*>8F80(@>8380)
+   HSTR  17,@>8380
+   ICOL  1
+   SCRO  252
+   ICOL  1
+   ICOL  1
+   HSTR  17,@>8380
+   ICOL  1
+   ICOL  1
+   VCHA  25,>84
+   ICOL  1
+   ICOL  1
+   ICOL  29
+   ICOL  5
+   ICOL  5
+   VCHA  25,>84
+   ICOL  5
+   ICOL  5
+   SCRO  132
+   ICOL  5
+   ICOL  5
+   ICOL  5
+   VCHA  29,>10
+   HTEX  >101010107C04040404048484788890A0C0
+   IROW  1
+   ICOL  17
+   ICOL  9
+   ICOL  5
+   HCHA  1,'@'
+   HCHA  1,'@'
+   HCHA  1,'@'
+   HCHA  1,'|'
+   ICOL  5
+   FOR   13
+   IROW  21
+   ICOL  5
+   ICOL  5
+   ICOL  5
+   ICOL  5
+   ICOL  5
+   ICOL  5
+   FOR   5
+   IROW  5
+   ICOL  21
+   ICOL  13
+   ICOL  5
+   ICOL  5
+   ICOL  5
+   SCRO  132
+   ICOL  5
+   ICOL  5
+   ICOL  5
+   ICOL  5

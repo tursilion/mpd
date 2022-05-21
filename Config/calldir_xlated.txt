@@ -1,0 +1,233 @@
+* I give up! Time to move to an assembler.
+* but I dislike the syntax, so I wrote a conversion tool for RAG asm
+* Code by Tursi
+
+ AORG >1D00
+
+* before anything else, make sure we are not running. >8344 is zero in
+* immediate mode, 01 for BASIC running, and FF for XB running. It's
+* just not tested in a running program so not safe.
+ CZ @>8344
+ BR ERROR
+
+
+* First, map the RAM bank into GROM 2, so we can back up a chunk of VDP space
+* PAB and data buffer.
+ MOVE >0001,G@SRAMPA,G@>1F12
+ MOVE >0200,V@>0D00,G@>5E00
+
+ MOVE >000C,G@PAB,V@>0D00
+ MOVE >00F5,V@>0D0A,V@>0D0B
+
+* CALL DIR("DSK1") works the same in BASIC and XB, so we can use that.
+* we do this manually, we don't support running BASIC from GROM.
+ DADD >0004,@>832C
+ DCEQ >B7C7,V*>832C
+ BR ERROR
+
+ DINCT @>832C
+ DCLR @>8300
+ ST V*>832C,@>8301
+ DINC @>832C
+
+ MOVE @>8300,V*>832C,V@>0D0A
+ ST @>8301,V@>0D09
+ INC V@>0D09
+
+OPEN
+ DST >0D09,@>8356
+ CALL G@>0010
+ BYTE >08
+ BS TRYAGA
+ CALL G@CHECKE
+ BS NOERRO
+
+TRYAGA
+ CZ V@>0DFF
+ BS ERROR
+
+
+ ST >0C,V@>0D01
+ CLR V@>0DFF
+ BR OPEN
+
+NOERRO
+ ST >02,V@>0D00
+
+READ
+ DST >0D09,@>8356
+ CALL G@>0010
+ BYTE >08
+ CALL G@CHECKE
+ BR DONE
+
+ CZ V@>0E00
+ BS DONE
+
+ CALL G@OUTPUT
+
+ SCAN
+ CEQ >02,@>8375
+ BS DONE
+ B G@READ
+
+CHECKE
+ ST V@>0D01,@>8300
+ AND >E0,@>8300
+ CZ @>8300
+ RTNC
+
+ERROR
+ CALL G@>0036
+ CALL G@BLANKS
+ MOVE >000C,G@DIRFAI,G@>5DE0
+ CALL G@EMIT
+
+DONE
+ CALL G@CLEANU
+ CALL G@>0012
+
+EMIT
+* (shifts up the characters in the GRAM buffer and displays them, then calls S
+ DST >1702,@>837E
+ DST >5DE0,@>8302
+
+NEXTCH
+ MOVE >0001,G@>0000(>8302),@>8304
+ ADD >60,@>8304
+ ST @>8304,@>837D
+ INC @>837F
+ INC @>8303
+ CEQ >FC,@>8303
+ BR NEXTCH
+
+BLANKS
+ MOVE >0001,G@LINE,G@>5DE0
+ MOVE >001B,G@>5DE0,G@>5DE1
+
+* (copy of the scroll in GROM 2 - just as expensive to copy as remap the pages
+ MOVE >02E0,V@>0020,V@>0000
+ FMT
+  COL >00
+  ROW >17
+  HCHA >02,'>7F'
+  HCHA >1C,'>80'
+  HCHA >02,'>7F'
+ FEND
+
+ RTN
+
+HEADER
+ CALL G@BLANKS
+ CALL G@DRAWLI
+ CALL G@BLANKS
+ CALL G@BLANKS
+ FMT
+  SCRO >60
+  COL >02
+  ROW >16
+  HTEX 'FILENAME'
+  ICOL 3
+  HTEX 'SIZE'
+  ICOL 4
+  HTEX 'TYPE'
+  ICOL 9
+  HCHA >1B,'-'
+ FEND
+ CALL G@BLANKS
+ RTN
+
+CLEANU
+ ST >01,V@>0D00
+ DST >0D09,@>8356
+ CALL G@>0010
+ BYTE >08
+ CLR @>8342
+ MOVE >0200,G@>5E00,V@>0D00
+ MOVE >0001,G@CFGPAG,G@>1F12
+ MOVE >0001,G@>4004,G@>1F12
+ RTN
+
+OUTPUT
+*(read line at VDP@>0E00, screen output at VDP@>02E2)
+* line buffer at GROM >5DE0 (28 bytes, ignores edge chars)
+* this gets fixed up while emitting it
+ ST V@>0E00,@>8301
+ ST >0E,@>8300
+ CLR @>8302
+ ST @>8301,@>8303
+ DINCT @>8300
+ DCHE >8000,V*>8300
+ BR NOPROT
+ DNEG V*>8300
+
+NOPROT
+ DCZ V*>8300
+ BS HEADER
+
+DRAWLI
+ MOVE @>8302,V@>0E01,G@>5DE0
+ CHE >0C,@>8303
+ BR SHORTN
+ CALL G@EMIT
+
+SHORTN
+*G@>5D - type, we expect >400x, where x is 1 to 5
+ DINC @>8300
+ ST V*>8300,@>8302
+ ST @>8302,@>8305
+ MUL >07,@>8302
+ DADD STRING,@>8302
+ MOVE >0007,G@>0000(>8302),G@>5DF0
+
+*G>5DE - second number, G@>0014 has number to string
+ DADD 8,@>8300
+ MOVE >0008,V*>8300,@>834A
+ CLR @>8355
+ CALL G@>0014
+ ST @>8355,@>8302
+ CLR @>8355
+ MOVE @>8355,*>8302,G@>5DEB
+
+*G>5DF - record length (if type <> 5/program)
+ CEQ >05,@>8305
+ BS NOREC
+
+ DADD 9,@>8300
+ MOVE >0008,V*>8300,@>834A
+ CLR @>8355
+ CALL G@>0014
+ ST @>8355,@>8302
+ CLR @>8355
+ MOVE @>8355,*>8302,G@>5DF7
+
+NOREC
+* done, write, scroll and return
+ CALL G@EMIT
+ RTN
+
+LINE
+*(for clearing the GRAM buffer)
+ BYTE >20
+
+STRING
+ TEXT '  FREE:'
+ TEXT 'DIS/FIX'
+ TEXT 'DIS/VAR'
+    TEXT 'INT/FIX'
+    TEXT 'INT/VAR'
+ TEXT 'PROGRAM'
+
+DIRFAI
+ TEXT '* DIR FAILED'
+
+* the byte needed to map in the configuration bank
+CFGPAG  BYTE >11
+* The byte needed to map in the SRAM bank
+SRAMPA BYTE >12
+
+PAB
+ DATA >001C,>0E00,>0000,>0000
+ DATA >6000,>2E2E
+
+ END

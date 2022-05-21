@@ -1,0 +1,248 @@
+MPD
+
+(Just sticking this here - also a personality that just boots the first cartridge - if none, display the title page with "INSERT CARTRIDGE" on it).
+
+Apple 2 personality
+
+Beep is somewhere around 1000hz, 950hz, 100ms.
+
+40 column text mode, light green on white! Instead of "APPLE ][" display "TI-99/4A" (hey, same size!).
+Load the Apple 2 font if we can find it! (or fake it. Or hell, I HAVE the ROMs.)
+
+Applesoft printable characters range from 32 to 95 - nothing else even displays. That's 64 characters, meaning 4 sets would fit. We only need three (normal, inverse and flash), so we could place them at 32, 96 and 160 (ignoring the rest). Flash could toggle patterns on an interrupt routine - it's only 512 bytes.
+
+How much of a language could we squeeze into a GROM?
+
+--------------
+INTEGER BASIC:
+--------------
+
+: - multiple statement separator
+REM 
+NEW
+CLEAR (resets all variables to 0)
+LIST [<range>]
+RUN [<line number>]
+RUN <disk file>
+LOAD <disk file>
+SAVE <disk file>
+Integer vars and string vars only (two letters max)
+DIM (arrays)
+= - + / * ^
+AND OR NOT
+= < > <= >= # (not equal)
+ABS SGN RDN(x) (random number 0-(x-1))
+LEN ASC
+GOTO
+IF THEN
+FOR TO STEP
+NEXT 
+GOSUB
+RETURN
+POP
+STOP (halt and print line number)
+CON (continue)
+END
+PEEK
+POKE
+CALL
+HIMEM:Addr (set highest memory)
+LOMEM:addr (set lowest memory)
+TRACE (display line numbers during run)
+NOTRACE
+DSP <var> (display variables when they change)
+GR
+COLOR=x
+PLOT x,y
+HLIN x1,x2 AT y
+VLIN y1,y2 AT x
+SCRN(x,y)
+IN#x (input from slot)
+INPUT s$;x,y
+PDL(n) (read paddle n)
+PR#x (output to slot)
+PRINT
+TEXT
+VTAB n (vertical tab)
+
+-----------------
+APPLESOFT CHANGES
+-----------------
+
+variables are floating point by default, A% is an integer variable
+3d arrays (integer was only 1?)
+allows => and <= instead of >= and <= (but why)
+allows <> and >< as not equal, does NOT support '#'
+loses RDN(x)
+INT SQR SIN COS TAN ATN EXP LOG RND(x) (>0=random value 0-1, 0=repeat last, <0=new seed)
+DEF FN(x) = expr
++ for strings
+LEN LEFT$ MID$ RIGHT$ STR$ VAL CHR$
+ON x GOTO
+IF cond THEN s1:s2:s3
+IF expr GOTO line
+ON x GOSUB
+ONERR GOTO
+RESUME (re-execute statement causing an error)
+FRE(0) (return free memory)
+HGR
+HGR2
+HCOLOR
+HPLOT x,y [TO x,y]
+DRAW x AT x,y
+XDRAW x at x,y
+SCALE=x
+ROT=x
+GET x (single character)
+READ x,y
+DATA x,y
+RESTORE
+? for PRINT
+HOME
+HTAB (horizontal tab)
+INVERSE
+NORMAL
+FLASH
+
+
+Not really all that much!! - but peek and poke... would we emulate the soft switches?? Maybe some of them? Maybe emulate an Apple2+ with 16k or something, no HGR. So just Integer BASIC?
+
+Probably disable CALL as well, then.. although playing in HGR really was nice. A subset of Applesoft (floating point variables, HGR) would be nice. On the other hand, nobody will ever use it, it's just a curiousity. No 80 column.
+
+Useful(?) switches:
+
+$C000 - keyboard ($80 - key was pressed, remainder is ASCII code)
+$C010 - write to clear $80 bit of $C000
+$C030 - speaker toggle (writes hit twice)
+$C050 - graphics mode
+$C051 - text mode
+$C052 - full graphics
+$c053 - mixed graphics
+$c054 - page 1
+$c055 - page 2
+$c056 - low res
+$c057 - high res
+
+Interesting Zero page addresses:
+
+$20 - text window left edge (0-39)
+$21 - text window width (1-40)
+$22 - text window top edge (0-23)
+$23 - text window bottom (1-24) ((bottom or height??))
+$24 - h cursor pos (0-39)
+$25 - v cursor pos (0-23)
+$30 - low res color
+$32 - text mode (63 -inverse, 255 - normal, 127-flash)
+$33 - prompt character
+
+Interesting CALLs (Applesoft):
+-3116 HGR2
+-3106 HGR
+-3086 Clear HGR to black
+-3082 Clear HGR to current HCOLOR
+-1998 clear screen 1 and set graphics
+-1994 clear top 20 lines of GR
+-1370 Reboot disk system
+-1233 TEXT
+-1223 set text mode (no clearing)
+-1216 GR
+-1205 set normal window
+-1184 Prints 'APPLE ][' at top of screen
+-1052 make the beep
+
+========================================================================
+
+Commands to support, from above:
+
+: for multi-statements
+REM
+NEW
+LIST [<range>]
+RUN
+RUN <file> (maybe Applesoft, or cart)
+BRUN <file> (E/A #5 only)
+LOAD <file> (Applesoft only)
+SAVE <file> (Applesoft only)
+CATALOG (all file ops support ",Dx", where x is a drive number, or ",C" for cart. Last used is remembered.)
+variables: float, string, and 3D array only (2 letters significant, float 16.16 internally)
+DIM
+=
+-
++
+/
+*
+^
+AND
+OR
+NOT
+<
+>
+<=
+>=
+<>
+ABS
+SGN
+LEN
+ASC
+GOTO
+IF THEN ELSE
+FOR TO STEP NEXT
+GOSUB RETURN
+POP
+END
+PEEK (limited, see below)
+POKE (limited, see below)
+GR  (note: uses TI's 64x48 mode, no text window)
+COLOR= (note: uses TI colors)
+PLOT x,y
+HLIN x1,x2 AT y
+VLIN y1,y2 AT x
+SCRN(x,y)
+INPUT s$;x,y
+PRINT, ?
+TEXT
+VTAB
+INT
+SQR
+SIN
+COS
+TAN
+ATN
+EXP
+LOG
+RND(x) (>0=random value 0-1, 0=repeat last, <0=new seed)
++ for strings
+LEN
+LEFT$
+MID$
+RIGHT$
+STR$
+VAL
+CHR$
+ON x GoTO
+ON x GOSUB
+HGR (with text window on bottom /8/ lines of 32 characters)
+HGR2 (not a second page, just no text window)
+HCOLOR= (supporting all 16 TI colors)
+HPLOT x,y [TO x,y]
+GET x$
+READ x,y
+DATA x,y
+RESTORE
+HOME
+HTAB
+INVERSE
+NORMAL
+FLASH (note: maybe just draws inverse)
+
+PEEKS and POKES
+---------------
+$C000 - keyboard ($80 - key was pressed, remainder is ASCII code)
+$C010 - write to clear $80 bit of $C000, can also read for similar data
+$C030 - speaker toggle (writes hit twice)
+
+Interesting Zero page addresses (these window addresses are in the BASIC manual)
+$20 - text window left edge (0-39)
+$21 - text window width (1-40)
+$22 - text window top edge (0-23)
+$23 - text window bottom (1-24) ((bottom or height??))

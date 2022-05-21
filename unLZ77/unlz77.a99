@@ -1,0 +1,59 @@
+* NOT TESTED
+* Asm version of unpacker (to call from GPL too):
+
+* Enter with:
+* R0 = source address in ROM (easy to adapt for GROM)
+* R1 = dest address in RAM (no VDP dest for now - would need a CPU buffer)
+* R2 = size of compressed data (must not be zero, and less than 32768)
+* Note: in GPL - we have to save and restore the GROM address
+*8300:	DATA >8302			* start address for XML >F0
+*8302:  R0 in GPL mode
+*8304:  R1 in GPL mode
+*8306:  R2 in GPL mode
+
+		AORG >8308
+
+* this block needed for GROM source (44 bytes)
+		MOVB @>9802,R6
+		SWPB R6
+		MOVB @>9802,R6
+		SWPB R6
+		DEC R6				* saves GROM address in R6
+		MOVB R0,@>9C02
+		SWPB R0
+		MOVB R0,@>9C02		* set GROM address from R0
+		LI R0,>9800			* load GROM read address
+		LI R11,>0060		* fake return address to reload GROM address
+		MOV @>8302,R0		* load the registers
+		MOV @>8304,R1
+		MOV @>8306,R2
+* end this GROM block	
+
+* calculate end address
+		A R0,R2
+
+LOOP
+		MOVB *R0,R4			* For GROM source, use MOVB *R0,R4 (no increment)
+		JLT GETREF			* it's a back reference (arithmetic!)
+		JNE GOT1St			* this is the first byte of the block
+		MOVB *R0,R4			* get the next byte (no increment if GROM)
+GOT1ST	MOVB R4,*R1+		* write it out
+		MOVB *R0,*R1+		* we know the next three bytes are valid
+		MOVB *R0,*R1+		* we know the next three bytes are valid (CPU src/dst could use MOV here, but that would require alignment)
+		MOVB *R0,*R1+		* we know the next three bytes are valid
+CHKDNE	C R0,R2
+		JL LOOP				* not done (logical!)
+		B *R11
+
+GETREF	SRA R4,8			* sign extend the negative offset
+		A R1,R4				* add in the current destination address (is this right? Do we need to increment?)
+		MOVB *R4+,*R1+		* (CPU src/dst could use MOV here, but that would require alignment)
+		MOVB *R4+,*R1+
+		MOVB *R4+,*R1+
+		MOVB *R4+,*R1+
+		JMP CHKDNE
+
+* Total size: 38 / 70 bytes - end address >833A / >835A (ok!)
+
+		END
+		

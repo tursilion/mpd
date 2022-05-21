@@ -1,0 +1,229 @@
+* I give up! Time to move to an assembler.
+* but I dislike the syntax, so I wrote a conversion tool for RAG asm
+* code by Tursi
+
+	AORG >1D00
+	
+* before anything else, make sure we are not running. >8344 is zero in
+* immediate mode, 01 for BASIC running, and FF for XB running. It's
+* just not tested in a running program so not safe.
+	CZ @>8344
+	BR G@ERROR
+	
+* First, map the RAM bank into GROM 2, so we can back up a chunk of VDP space for our
+* PAB and data buffer.
+	MOVE >0001 TO G@>1F12 FROM G@SRAMPAGE	* map in SRAM
+	MOVE >0200 TO G@>5E00 FROM VDP@>0D00	* copy 200 bytes out of VDP program space for our PAB and buffer
+
+	MOVE >000C TO VDP@>0D00 FROM G@PAB		* copy in PAB
+	MOVE >00F5 TO VDP@>0D0B FROM VDP@>0D0A	* repeat the periods to the end of the page
+
+* CALL DIR("DSK1") works the same in BASIC and XB, so we can use that.
+* we do this manually, we don't support running BASIC from GROM. 
+	DADD @>832C,>0004						* skip the length and DIR (only one possible name!)
+	DCEQ VDP*>832C,>B7C7					* must be open parenthesis followed by literal string
+	BR G@ERROR								* if not true, throw an error
+	DINCT @>832C							* skip those two tokens, now at the length byte
+	DCLR @>8300								* prepare count
+	ST @>8301,VDP*>832C						* get count
+	DINC @>832C								* skip the count byte
+
+	MOVE @>8300 TO VDP@>0D0A FROM VDP*>832C * copy the name from VDP
+	ST VDP@>0D09,@>8301						* copy the length too, now we're ready for the open call
+	INC VDP@>0D09							* increment the length to include the period (already stored)
+
+OPEN				
+	DST @>8356,>0D09						* set pointer to PAB
+	CALL G@>0010							* call DSRLNK
+	BYTE >08								* DSR call, not Subprogram call
+	BS G@TRYAGAIN							* condition is SET if bad DSR name (try again just in case)
+	CALL G@CHECKERR							* test error byte
+	BS G@NOERROR							* all good
+
+TRYAGAIN			
+	CZ VDP@>0DFF							* already fixed mode?
+	BS G@ERROR
+	
+	ST VDP@>0D01,>0C						* change to fixed and...
+	CLR VDP@>0DFF							* clear the flag
+	BR G@OPEN								* try again
+	
+NOERROR
+	ST VDP@>0D00,>02						* change to read mode
+	
+READ
+	DST @>8356,>0D09						* set PAB pointer
+	CALL G@>0010							* call DSRLNK
+	BYTE >08								* DSR call
+	CALL G@CHECKERR						* check for error
+	BR G@DONE								* error terminates the read
+		
+	CZ VDP@>0E00							* zero length filename?
+	BS G@DONE								* then we're done
+				
+	CALL G@OUTPUT							* output this string to the screen
+				
+	SCAN									* check keyboard
+	CEQ @>8375,>02							* FCTN-4?
+	BS G@DONE								* then exit
+	B G@READ								* then branch around and do it again!
+				
+CHECKERR
+	ST @>8300,VDP@>0D01						* get status byte
+	AND @>8300,>E0							* mask out error bits
+	CZ @>8300								* COND set if no error, reset on error
+	RTNC
+				
+ERROR
+	CALL G@>0036							* play error tone
+	CALL G@BLANKSCR							* blank line
+	MOVE >000C TO G@>5DE0 FROM G@DIRFAIL	* copy error to buffer
+	CALL G@EMIT								* display it then fall through
+	
+DONE
+	CALL G@CLEANUP							* close file, restore VDP and GROM banks
+	CALL G@>0012							* and return
+
+EMIT 
+* (shifts up the characters in the GRAM buffer and displays them, then calls SCROLL)
+	DST @>837E,>1702					* Row 23, col 3
+	DST @>8302,>5DE0					* GROM buffer
+
+NEXTCHAR
+	MOVE >0001 TO @>8304 FROM G@>0000(>8302) * get a char (so wasteful!)
+	ADD @>8304,>60						* add offset
+	ST @>837D,@>8304					* put it on the screen
+	INC @>837F							* next column
+	INC @>8303
+	CEQ @>8303,>FC						* 28 chars processed?
+	BR G@NEXTCHAR
+
+BLANKSCR
+	MOVE >0001 TO G@>5DE0 FROM G@LINE	* erase the line (first byte)
+	MOVE >001b TO G@>5DE1 FROM G@>5DE0	* erase the line (the rest of them)
+
+* (copy of the scroll in GROM 2 - just as expensive to copy as remap the pages)
+	MOVE >02E0 to VDP@>0000 FROM VDP@>0020
+	FMT
+		XPT=>00
+		YPT=>17
+		02'>7F'
+		1C'>80'
+		02'>7F'
+	END FMT
+
+	RTN									* and return
+
+HEADER
+	CALL G@BLANKSCR					* need this for initialization
+	CALL G@DRAWLINE					* output the line (diskname/size/free)
+	CALL G@BLANKSCR					* two blank lines to fill in
+	CALL G@BLANKSCR
+	FMT
+		SCRO >60	
+		XPT=>02
+		YPT=>16
+		'FILENAME'
+		X+=3
+		'SIZE'
+		X+=4
+		'TYPE'
+		x+=9
+		1B'-'
+	ENDFMT
+	CALL G@BLANKSCR
+	RTN
+
+CLEANUP
+	ST VDP@>0D00,>01						* change to close opcode
+	DST @>8356,>0D09
+	CALL G@>0010							* call DSRLNK
+	BYTE >08								* DSR call
+	CLR @>8342								* make BASIC happy
+	MOVE >0200 TO VDP@>0D00 FROM G@>5E00	* restore VDP
+	MOVE >0001 TO G@>1F12 FROM G@CFGPAGE	* map in the configuration block
+	MOVE >0001 TO G@>1F12 FROM G@>4004		* map the configured bank back in
+	RTN
+
+OUTPUT 
+*(read line at VDP@>0E00, screen output at VDP@>02E2)
+* line buffer at GROM >5DE0 (28 bytes, ignores edge chars)
+* this gets fixed up while emitting it
+	ST @>8301,VDP@>0E00					* length of name
+	ST @>8300,>0E						* vdp buffer pointer (points to end of name)
+	CLR @>8302							* making a 16-bit length
+	ST @>8303,@>8301					* save the name length
+	DINCT @>8300						* now points to first number (type)
+	DCHE VDP*>8300,>8000				* is it negative (protected?)
+	BR G@NOPROT
+	DNEG VDP*>8300						* remove protection flag
+
+NOPROT
+	DCZ VDP*>8300						* is it zero? (should be header only)
+	BS G@HEADER						* yes, write header
+
+DRAWLINE
+	MOVE @>8302 TO G@>5DE0 FROM VDP@>0E01	* write name into buffer
+	CHE @>8303,>0C						* 12 character or longer name?
+	BR G@SHORTNAME
+	CALL G@EMIT						* write and scroll now
+
+SHORTNAME
+*G@>5DF0 - type, we expect >400x, where x is 1 to 5
+	DINC @>8300							* second byte
+	ST @>8302,VDP*>8300					* get it
+	ST @>8305,@>8302					* save it for later
+	MUL @>8302,>07						* multiply by length of string - output in >02/>03
+	DADD @>8302,STRINGTAB				* make a pointer to GROM
+	MOVE >0007 TO G@>5DF0 FROM G@>0000(>8302)
+
+*G>5DEB - second number, G@>0014 has number to string
+	DADD @>8300,8						* points to second number (size)
+	MOVE >0008 TO @>834A FROM VDP*>8300	* copy number to FAC
+	CLR @>8355							* TI BASIC format number
+	CALL G@>0014						* number to string
+	ST @>8302,@>8355					* pointer value
+	CLR @>8355							* fixup for length
+	MOVE @>8355 TO G@>5DEB FROM *>8302 	* write the number (single byte ptr in scratchpad?)
+
+*G>5DF7 - record length (if type <> 5/program)
+	CEQ @>8305,>05
+	BS G@NOREC
+	DADD @>8300,9						* points to third number (record length)
+	MOVE >0008 TO @>834A FROM VDP*>8300	* copy number to FAC
+	CLR @>8355							* TI BASIC format number
+	CALL G@>0014						* number to string
+	ST @>8302,@>8355					* pointer value
+	CLR @>8355							* fixup for length
+	MOVE @>8355 TO G@>5DF7 FROM *>8302 	* write the number (single byte ptr in scratchpad?)
+
+NOREC
+* done, write, scroll and return
+	CALL G@EMIT
+	RTN
+
+LINE 
+*(for clearing the GRAM buffer)
+	BYTE >20
+						
+STRINGTAB
+	TEXT "  FREE:"
+	TEXT "DIS/FIX"
+	TEXT "DIS/VAR"
+    TEXT "INT/FIX"
+    TEXT "INT/VAR"
+	TEXT "PROGRAM"
+	
+DIRFAIL
+	TEXT "* DIR FAILED"
+
+* the byte needed to map in the configuration bank
+CFGPAGE		BYTE >11
+* The byte needed to map in the SRAM bank
+SRAMPAGE	BYTE >12
+
+PAB 
+	DATA >001C,>0E00,>0000,>0000
+	DATA >6000,>2E2E
+
+	END

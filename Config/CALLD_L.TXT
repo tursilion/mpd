@@ -1,0 +1,231 @@
+
+
+
+    RAG SOFTWARE GPL ASSEMBLER 1                                      0001
+
+    LOCN   OBJECT CODE     STMT     SOURCE
+                           0001 * I give up! Time to move to an assembler.
+                           0002 * but I dislike the syntax, so I wrote a convers
+    1D00                   0003  AORG >1D00
+                           0004 * before anything else, make sure we are not run
+                           0005 * immediate mode, 01 for BASIC running, and FF f
+                           0006 * just not tested in a running program so not sa
+    1D00 8E44              0007  CZ @>8344
+    1D02 5D8B              0008  BR ERROR
+                           0009 * First, map the RAM bank into GROM 2, so we can
+                           0010 * PAB and data buffer.
+    1D04 2100011F121EED    0011  MOVE >0001,G@SRAMPA,G@>1F12
+    1D0B 2502005E00AD00    0012  MOVE >0200,V@>0D00,G@>5E00
+    1D12 31000CAD001EEE    0013  MOVE >000C,G@PAB,V@>0D00
+    1D19 3500F5AD0BAD0A    0014  MOVE >00F5,V@>0D0A,V@>0D0B
+                           0015 * CALL DIR("DSK1") works the same in BASIC and X
+                           0016 * we do this manually, we don't support running 
+    1D20 A32C0004          0017  DADD >0004,@>832C
+    1D24 D7B02CB7C7        0018  DCEQ >B7C7,V*>832C
+    1D29 5D8B              0019  BR ERROR
+    1D2B 952C              0020  DINCT @>832C
+    1D2D 8700              0021  DCLR @>8300
+    1D2F BC01B02C          0022  ST V*>832C,@>8301
+    1D33 912C              0023  DINC @>832C
+                           0024 * DCLR @>8300
+                           0025 * ST @>8301,VDP*>832C
+                           0026 * SUB @>8301,>04
+                           0027 * GT
+                           0028 * BR G@ERROR
+                           0029 * DADD @>832C,>0005
+    1D35 3400AD0AB02C      0030  MOVE @>8300,V*>832C,V@>0D0A
+    1D3B BCAD0901          0031  ST @>8301,V@>0D09
+    1D3F 90AD09            0032  INC V@>0D09
+                           0033 OPEN
+    1D42 BF560D09          0034  DST >0D09,@>8356
+    1D46 060010            0035  CALL G@>0010
+    1D49 08                0036  BYTE >08
+    1D4A 7D51              0037  BS TRYAGA
+    1D4C 061D81            0038  CALL G@CHECKE
+    1D4F 7D5F              0039  BS NOERRO
+                           0040 TRYAGA
+    1D51 8EADFF            0041  CZ V@>0DFF
+    1D54 7D8B              0042  BS ERROR
+    1D56 BEAD010C          0043  ST >0C,V@>0D01
+    1D5A 86ADFF            0044  CLR V@>0DFF
+    1D5D 5D42              0045  BR OPEN
+                           0046 NOERRO
+    1D5F BEAD0002          0047  ST >02,V@>0D00
+                           0048 READ
+    1D63 BF560D09          0049  DST >0D09,@>8356
+    1D67 060010            0050  CALL G@>0010
+    1D6A 08                0051  BYTE >08
+    1D6B 061D81            0052  CALL G@CHECKE
+    1D6E 5D9B              0053  BR DONE
+    1D70 8EAE00            0054  CZ V@>0E00
+    1D73 7D9B              0055  BS DONE
+
+
+    RAG SOFTWARE GPL ASSEMBLER 1                                      0002
+
+    LOCN   OBJECT CODE     STMT     SOURCE
+    1D75 061E35            0056  CALL G@OUTPUT
+    1D78 03                0057  SCAN
+    1D79 D67502            0058  CEQ >02,@>8375
+    1D7C 7D9B              0059  BS DONE
+    1D7E 051D63            0060  B G@READ
+                           0061 CHECKE
+    1D81 BC00AD01          0062  ST V@>0D01,@>8300
+    1D85 B200E0            0063  AND >E0,@>8300
+    1D88 8E00              0064  CZ @>8300
+    1D8A 01                0065  RTNC
+                           0066 ERROR
+    1D8B 060036            0067  CALL G@>0036
+    1D8E 061DBF            0068  CALL G@BLANKS
+    1D91 21000C5DE01EE0    0069  MOVE >000C,G@DIRFAI,G@>5DE0
+    1D98 061DA1            0070  CALL G@EMIT
+                           0071 DONE
+    1D9B 061E11            0072  CALL G@CLEANU
+    1D9E 060012            0073  CALL G@>0012
+                           0074 EMIT
+                           0075 * (shifts up the characters in the GRAM buffer a
+    1DA1 BF7E1702          0076  DST >1702,@>837E
+    1DA5 BF025DE0          0077  DST >5DE0,@>8302
+                           0078 NEXTCH
+    1DA9 33000104000002    0079  MOVE >0001,G@>0000(>8302),@>8304
+    1DB0 A20460            0080  ADD >60,@>8304
+    1DB3 BC7D04            0081  ST @>8304,@>837D
+    1DB6 907F              0082  INC @>837F
+    1DB8 9003              0083  INC @>8303
+    1DBA D603FC            0084  CEQ >FC,@>8303
+    1DBD 5DA9              0085  BR NEXTCH
+                           0086 BLANKS
+    1DBF 2100015DE01EB5    0087  MOVE >0001,G@LINE,G@>5DE0
+    1DC6 21001B5DE15DE0    0088  MOVE >001B,G@>5DE0,G@>5DE1
+                           0089 * (copy of the scroll in GROM 2 - just as expens
+    1DCD 3502E0A000A020    0090  MOVE >02E0,V@>0020,V@>0000
+    1DD4 08                0091  FMT
+    1DD5 FF00              0092   COL >00
+    1DD7 FE17              0093   ROW >17
+    1DD9 4146              0094   HCHA >02,'>7F'
+    1DDB 5B30              0095   HCHA >1C,'>80'
+    1DDD 4146              0096   HCHA >02,'>7F'
+    1DDF FB                0097  FEND
+    1DE0 00                0098  RTN
+                           0099 HEADER
+    1DE1 061DBF            0100  CALL G@BLANKS
+    1DE4 061E52            0101  CALL G@DRAWLI
+    1DE7 061DBF            0102  CALL G@BLANKS
+    1DEA 061DBF            0103  CALL G@BLANKS
+    1DED 08                0104  FMT
+    1DEE FC60              0105   SCRO >60
+    1DF0 FF02              0106   COL >02
+    1DF2 FE16              0107   ROW >16
+    1DF4 0746494C454E414D  0108   HTEX 'FILENAME'
+    1DFC 45
+    1DFD 82                0109   ICOL 3
+
+
+    RAG SOFTWARE GPL ASSEMBLER 1                                      0003
+
+    LOCN   OBJECT CODE     STMT     SOURCE
+    1DFE 0353495A45        0110   HTEX 'SIZE'
+    1E03 83                0111   ICOL 4
+    1E04 0354595045        0112   HTEX 'TYPE'
+    1E09 88                0113   ICOL 9
+    1E0A 5A2D              0114   HCHA >1B,'-'
+    1E0C FB                0115  FEND
+    1E0D 061DBF            0116  CALL G@BLANKS
+    1E10 00                0117  RTN
+                           0118 CLEANU
+    1E11 BEAD0001          0119  ST >01,V@>0D00
+    1E15 BF560D09          0120  DST >0D09,@>8356
+    1E19 060010            0121  CALL G@>0010
+    1E1C 08                0122  BYTE >08
+    1E1D 8642              0123  CLR @>8342
+    1E1F 310200AD005E00    0124  MOVE >0200,G@>5E00,V@>0D00
+    1E26 2100011F121EEC    0125  MOVE >0001,G@CFGPAG,G@>1F12
+    1E2D 2100011F124004    0126  MOVE >0001,G@>4004,G@>1F12
+    1E34 00                0127  RTN
+                           0128 OUTPUT
+                           0129 *(read line at VDP@>0E00, screen output at VDP@>
+                           0130 * line buffer at GROM >5DE0 (28 bytes, ignores e
+                           0131 * this gets fixed up while emitting it
+    1E35 BC01AE00          0132  ST V@>0E00,@>8301
+    1E39 BE000E            0133  ST >0E,@>8300
+    1E3C 8602              0134  CLR @>8302
+    1E3E BC0301            0135  ST @>8301,@>8303
+    1E41 9500              0136  DINCT @>8300
+    1E43 CBB0008000        0137  DCHE >8000,V*>8300
+    1E48 5E4D              0138  BR NOPROT
+    1E4A 83B000            0139  DNEG V*>8300
+                           0140 NOPROT
+    1E4D 8FB000            0141  DCZ V*>8300
+    1E50 7DE1              0142  BS HEADER
+                           0143 DRAWLI
+    1E52 24025DE0AE01      0144  MOVE @>8302,V@>0E01,G@>5DE0
+    1E58 CA030C            0145  CHE >0C,@>8303
+    1E5B 5E60              0146  BR SHORTN
+    1E5D 061DA1            0147  CALL G@EMIT
+                           0148 SHORTN
+                           0149 *G@>5D - type, we expect >400x, where x is 1 to 
+    1E60 9100              0150  DINC @>8300
+    1E62 BC02B000          0151  ST V*>8300,@>8302
+    1E66 BC0502            0152  ST @>8302,@>8305
+    1E69 AA0207            0153  MUL >07,@>8302
+    1E6C A3021EB6          0154  DADD STRING,@>8302
+    1E70 2300075DF0000002  0155  MOVE >0007,G@>0000(>8302),G@>5DF0
+                           0156 *G>5DE - second number, G@>0014 has number to st
+    1E78 A3000008          0157  DADD 8,@>8300
+    1E7C 3500084AB000      0158  MOVE >0008,V*>8300,@>834A
+    1E82 8655              0159  CLR @>8355
+    1E84 060014            0160  CALL G@>0014
+    1E87 BC0255            0161  ST @>8355,@>8302
+    1E8A 8655              0162  CLR @>8355
+    1E8C 24555DEB9002      0163  MOVE @>8355,*>8302,G@>5DEB
+                           0164 *G>5DF - record length (if type <> 5/program)
+
+
+    RAG SOFTWARE GPL ASSEMBLER 1                                      0004
+
+    LOCN   OBJECT CODE     STMT     SOURCE
+    1E92 D60505            0165  CEQ >05,@>8305
+    1E95 7EB1              0166  BS NOREC
+    1E97 A3000009          0167  DADD 9,@>8300
+    1E9B 3500084AB000      0168  MOVE >0008,V*>8300,@>834A
+    1EA1 8655              0169  CLR @>8355
+    1EA3 060014            0170  CALL G@>0014
+    1EA6 BC0255            0171  ST @>8355,@>8302
+    1EA9 8655              0172  CLR @>8355
+    1EAB 24555DF79002      0173  MOVE @>8355,*>8302,G@>5DF7
+                           0174 NOREC
+                           0175 * done, write, scroll and return
+    1EB1 061DA1            0176  CALL G@EMIT
+    1EB4 00                0177  RTN
+                           0178 LINE
+                           0179 *(for clearing the GRAM buffer)
+    1EB5 20                0180  BYTE >20
+                           0181 STRING
+    1EB6 2020465245453A    0182  TEXT '  FREE:'
+    1EBD 4449532F464958    0183  TEXT 'DIS/FIX'
+    1EC4 4449532F564152    0184  TEXT 'DIS/VAR'
+    1ECB 494E542F464958    0185     TEXT 'INT/FIX'
+    1ED2 494E542F564152    0186     TEXT 'INT/VAR'
+    1ED9 50524F4752414D    0187  TEXT 'PROGRAM'
+                           0188 DIRFAI
+    1EE0 2A20444952204641  0189  TEXT '* DIR FAILED'
+    1EE8 494C4544
+                           0190 * the byte needed to map in the configuration ba
+    1EEC 11                0191 CFGPAG  BYTE >11
+                           0192 * The byte needed to map in the SRAM bank
+    1EED 12                0193 SRAMPA BYTE >12
+                           0194 PAB
+    1EEE 001C0E0000000000  0195  DATA >001C,>0E00,>0000,>0000
+    1EF6 60002E2E          0196  DATA >6000,>2E2E
+    1EFA                   0197  END
+
+
+    RAG SOFTWARE GPL ASSEMBLER 1                                      0005
+ 
+    BLANKS 1DBF  CFGPAG 1EEC  CHECKE 1D81  CLEANU 1E11  DIRFAI 1EE0
+    DONE   1D9B  DRAWLI 1E52  EMIT   1DA1  ERROR  1D8B  HEADER 1DE1
+    LINE   1EB5  NEXTCH 1DA9  NOERRO 1D5F  NOPROT 1E4D  NOREC  1EB1
+    OPEN   1D42  OUTPUT 1E35  PAB    1EEE  READ   1D63  SHORTN 1E60
+    SRAMPA 1EED  STRING 1EB6  TRYAGA 1D51
+    ERRORS: 0000
+

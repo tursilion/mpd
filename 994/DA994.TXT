@@ -1,0 +1,76 @@
+*
+* 99/4 GROM 0000-1800 (adapted from E/A GROM file)
+*
+TITL 0000,'99/4 GROM'
+NOTE 0000,'GROM Header'
+DATA 0000
+ADDR 0006
+DATA 0008
+ADDR 000A
+DATA 000C
+CODE 0010
+DATA 0045
+CODE 004F
+END  1800
+*
+* 99/4 RAMPAD Variables
+*
+CPU  83E0,GPLWS   GPL Workspace
+*
+* GROM 0 GPL Subroutines
+*
+GROM >0010,DSRLNK    GROM DSRLNK
+CALL >0010,1         8=Subroutine, 10=DSR
+GROM >0012,DSRRET    DSRLNK Return
+GROM >0014,SUBCNS    Subroutine: STR$(FAC)
+GROM >0016,STDCHR    Load big char set
+GROM >0018,UCASE     Load Upper Case chars
+GROM >001A,BWARN     BASIC Warning message
+CALL >001A,2          Two parms
+GROM >001C,BERR      BASIC Error message
+CALL >001C,2          Two parms
+GROM >001E,BEXEC     Execute BASIC pgm in GROM
+GROM >0020,PWRUP     Power Up Routine
+GROM >0022,SUBINT    Subroutine: INT(FAC)
+GROM >0024,SUBPWR    Subroutine: FAC**ARG
+GROM >0026,SUBSQR    Subroutine: SQR(FAC)
+GROM >0028,SUBEXP    Subroutine: EXP(FAC)
+GROM >002A,SUBLOG    Subroutine: LOG(FAC)
+GROM >002C,SUBCOS    Subroutine: COS(FAC)
+GROM >002E,SUBSIN    Subroutine: SIN(FAC)
+GROM >0030,SUBTAN    Subroutine: TAN(FAC)
+GROM >0032,SUBATN    Subroutine: ATN(FAC)
+GROM >0034,BEEP      Accept tone
+GROM >0036,HONK      Reject tone
+GROM >0038,BGETSS    BASIC Get String Space
+GROM >003B,BITREV    Bit Reversal
+GROM >003D,CASDSR    Cassette DSR routine
+GROM >004A,LCASE     Load Lower Case chars
+*
+* CPU RAMPAD
+*
+CPU  >834A,FAC      Floating Accumulator
+CPU  >835C,ARG      Floating Argument
+CPU  >8354,ERCODE   Floating Point Error Code
+CPU  >8356,VPAB     VDP address of PAB
+CPU  >836E,VSTACK   Value Stack
+CPU  >8370,MEMSIZ   Highest VDP RAM address
+CPU  >8372,DATSTK   GPL Data Stack
+CPU  >8373,SUBSTK   GPL Subroutine Stack
+CPU  >8374,KBNO     Keyboard number
+CPU  >8375,KEY      Key code
+CPU  >8376,JOYX     Joystick X value
+CPU  >8377,JOYY     Joystick Y value
+CPU  >8378,RANDNO   Random Number
+CPU  >8379,ITIMER   VDP Interrupt timer
+CPU  >837A,SPRNO    Highest Sprine - Auto motion
+CPU  >837B,VSTAT    VDP Status
+CPU  >837C,STATUS   GPL Status byte
+CPU  >837D,VCHAR    VDP Character Buffer
+CPU  >837E,VROW     VDP Screen Row
+CPU  >837F,VCOL     VDP Screen Column
+CPU  >83C0,RSEED    Random Number Seed
+CPU  >83C2,SYSFLG   System Flags
+CPU  >83C4,USRINT   User Interrupt Routine
+CPU  >83D4,VDPR1    VDP R1 Contents
+ 
